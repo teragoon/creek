@@ -64,7 +64,7 @@ module Creek
         opener = Nokogiri::XML::Reader::TYPE_ELEMENT
         closer = Nokogiri::XML::Reader::TYPE_END_ELEMENT
         Enumerator.new do |y|
-          shared, row, cells, cell = false, nil, {}, nil
+          shared, row, cells, cell, style = false, nil, {}, nil, nil
           @book.files.file.open(path) do |xml|
             Nokogiri::XML::Reader.from_io(xml).each do |node|
               if (node.name.eql? 'row') and (node.node_type.eql? opener)
@@ -79,11 +79,16 @@ module Creek
               elsif (node.name.eql? 'c') and (node.node_type.eql? opener)
                   shared = node.attribute('t').eql? 's'
                   cell = node.attribute('r')
+                  style = node.attribute('s')
               elsif node.value?
                 if shared
                   cells[cell] = @book.shared_strings.dictionary[node.value.to_i] if @book.shared_strings.dictionary.has_key? node.value.to_i
                 else
-                  cells[cell] = node.value
+                  if style.eql? '125'
+                    cells[cell] = (DateTime.new(1899,12,30) + node.value.to_i.days).strftime("%F")
+                  else
+                    cells[cell] = node.value
+                  end
                 end
               end
             end
